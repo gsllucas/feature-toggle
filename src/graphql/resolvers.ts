@@ -1,11 +1,29 @@
+import { FeatureHelper } from '../helpers/feature.helper';
 import { redisClient } from '../redis/client';
+import { Feature } from './interfaces/feature';
 
 const resolvers = {
   Query: {
     feature: async (_, args) => {
       const key = `feature:${args.feature}`;
       const cacheData = await redisClient.get(key);
-      if (cacheData) return JSON.parse(cacheData);
+
+      if (cacheData) {
+        const parsedFeature = JSON.parse(cacheData) as Feature;
+        const institutions = parsedFeature.institutions;
+        return institutions.length === 0
+          ? parsedFeature
+          : {
+              ...parsedFeature,
+              available:
+                parsedFeature.available &&
+                FeatureHelper.getAvailabilityByInstitution(
+                  institutions,
+                  args.institutionId
+                ),
+            };
+      }
+
       return null;
     },
     features: async (_, args) => {
@@ -42,7 +60,8 @@ const resolvers = {
       const feature = await redisClient.get(key);
       if (feature) throw new Error('Feature already exists');
       const dateAt = args.input.available ? 'availableAt' : 'disabledAt';
-      const value = { ...args.input, [dateAt]: new Date() };
+      const institutions = args.input.institutions ?? [];
+      const value = { ...args.input, [dateAt]: new Date(), institutions };
       const cacheResponse = await redisClient.set(key, JSON.stringify(value));
       if (cacheResponse === 'OK') return value;
       return null;

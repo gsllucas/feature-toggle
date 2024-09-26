@@ -14,6 +14,7 @@ const typeDefs = `#graphql
   input FeatureInput {
     feature: String!
     available: Boolean!
+    institutions: [Int!]
   }
 
   input GetFeaturesFilter {
@@ -21,7 +22,7 @@ const typeDefs = `#graphql
   }
 
   type Query {
-    feature(feature: String!): Feature,
+    feature(feature: String!, institutionId: Int!): Feature,
     features(filter: GetFeaturesFilter): [Feature]
   }
 
